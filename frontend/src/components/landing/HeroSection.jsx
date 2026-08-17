@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react";
 import HeroImg from "../../assets/HeroImg2.png"
+import { Link } from "react-router-dom";
 
 
 function HeroSection() {
@@ -386,8 +387,8 @@ function HeroSection() {
             >
               {/* Primary */}
 
-              <a
-                href="#get-started"
+              <Link
+                to="/dashboard"
                 className="
                   group
                   inline-flex
@@ -433,7 +434,7 @@ function HeroSection() {
                     group-hover:translate-x-1
                   "
                 />
-              </a>
+              </Link>
 
               {/* Secondary */}
 
