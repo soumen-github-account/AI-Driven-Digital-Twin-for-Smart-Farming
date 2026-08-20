@@ -10,6 +10,10 @@ import DigitalTwin from './pages/DigitalTwin'
 import CropHealth from './pages/CropHealth'
 import Soil from './pages/Soil'
 import IrrigationPage from './pages/IrrigationPage'
+import Weather from './pages/Weather'
+import AIAssistantPage from './pages/AIAssistantPage'
+import Predictions from './pages/Predictions'
+import AlertsPage from './pages/AlertsPage'
 
 
 const App = () => {
@@ -26,17 +30,17 @@ const App = () => {
             path="/dashboard"
             element={<Dashboard />}
           />
-
+          
+          <Route
+            path="/farms"
+            element={<Farms />}
+          />
+          
           <Route
             path="/fields"
             element={<div>Field</div>}
           />
 
-          <Route
-            path="/digital-twin"
-            element={<DigitalTwin />}
-          />
-          
           <Route
             path="/digital-twin"
             element={<DigitalTwin />}
@@ -54,12 +58,26 @@ const App = () => {
 
           <Route
             path="/weather"
-            element={<DigitalTwin />}
+            element={<Weather />}
+          />
+
+          <Route
+            path="/ai-assistant"
+            element={<AIAssistantPage />}
+          />
+
+          <Route
+            path="/predictions"
+            element={<Predictions />}
           />
 
           <Route
             path="/irrigation"
             element={<IrrigationPage />}
+          />
+          <Route
+            path="/alerts"
+            element={<AlertsPage />}
           />
 
 
