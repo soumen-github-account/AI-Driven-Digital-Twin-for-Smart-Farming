@@ -93,7 +93,7 @@ function Navbar() {
                 sm:text-[20px]
               "
             >
-              AgriTwin
+              Farm Intel
             </span>
 
             {/* AI Badge */}

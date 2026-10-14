@@ -3,22 +3,22 @@ import { ChevronDown, MessageCircleQuestion, Sparkles } from "lucide-react";
 
 const faqs = [
   {
-    question: "What is AgriTwin AI?",
+    question: "What is Farm Intel AI?",
     answer:
-      "AgriTwin AI is an intelligent digital twin platform for farms. It combines AI, IoT, weather, satellite and soil data to create a real-time digital representation of your farm and help you make smarter farming decisions.",
+      "Farm Intel AI is an intelligent digital twin platform for farms. It combines AI, IoT, weather, satellite and soil data to create a real-time digital representation of your farm and help you make smarter farming decisions.",
   },
   {
     question: "How does the Digital Twin work?",
     answer:
-      "AgriTwin collects data from sensors, satellite imagery, weather services and soil information. Our AI analyzes this data continuously and creates a dynamic digital model of your farm.",
+      "Farm Intel collects data from sensors, satellite imagery, weather services and soil information. Our AI analyzes this data continuously and creates a dynamic digital model of your farm.",
   },
   {
-    question: "Can AgriTwin detect crop diseases?",
+    question: "Can Farm Intel detect crop diseases?",
     answer:
-      "Yes. AgriTwin uses AI and computer vision to analyze crop conditions and identify potential disease risks at an early stage, helping farmers take preventive action.",
+      "Yes. Farm Intel uses AI and computer vision to analyze crop conditions and identify potential disease risks at an early stage, helping farmers take preventive action.",
   },
   {
-    question: "Does AgriTwin provide irrigation recommendations?",
+    question: "Does Farm Intel provide irrigation recommendations?",
     answer:
       "Yes. The platform analyzes soil moisture, weather conditions, crop requirements and historical data to recommend when and how much irrigation may be required.",
   },
@@ -28,7 +28,7 @@ const faqs = [
       "Absolutely. AgriTwin provides real-time monitoring for connected IoT sensors, soil moisture, weather conditions, crop health and other important farm parameters.",
   },
   {
-    question: "Is AgriTwin suitable for small farms?",
+    question: "Is Farm Intel suitable for small farms?",
     answer:
       "Yes. AgriTwin is designed to support different types and sizes of farms, from small farmers to large agricultural operations and agribusinesses.",
   },

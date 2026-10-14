@@ -45,7 +45,6 @@ function OverallConfidence() {
         <p className="mt-2 text-[8px] text-[var(--color-text-muted)]">
           Last Updated: Today, 10:30 AM
         </p>
-
       </div>
 
     </div>

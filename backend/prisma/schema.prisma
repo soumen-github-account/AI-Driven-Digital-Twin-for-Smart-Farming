@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  FARMER
+  AGRIBUSINESS
+  RESEARCHER
+  OTHER
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum FarmStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum DigitalTwinStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model User {
+  id       String  @id @default(uuid())
+  name     String
+  email    String  @unique
+  phone    String? @unique
+  password String?
+  googleId String? @unique
+
+  role         UserRole     @default(FARMER)
+  authProvider AuthProvider @default(LOCAL)
+
+  farms        Farm[]
+  digitalTwins DigitalTwin[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Farm {
+  id String @id @default(uuid())
+
+  name        String
+  description String?
+  imageUrl    String?
+
+  location  String?
+  city      String?
+  state     String?
+  country   String?
+  pincode   String?
+  latitude  Float?
+  longitude Float?
+
+  area     Float?
+  areaUnit String @default("acre")
+
+  farmType   String?
+  mainCrop   String?
+  farmStatus FarmStatus @default(ACTIVE)
+  userId     String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  fields       Field[]
+  digitalTwins DigitalTwin[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Field {
+  id String @id @default(uuid())
+
+  name     String
+  imageUrl String?
+
+  area     Float?
+  areaUnit String @default("acre")
+
+  crop           String?
+  soilType       String?
+  irrigationType String?
+  plantingDate   DateTime?
+  notes          String?
+
+  farmId String
+
+  farm Farm @relation(fields: [farmId], references: [id], onDelete: Cascade)
+
+  digitalTwin DigitalTwin?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DigitalTwin {
+  id   String @id @default(uuid())
+  name String
+
+  // Polygon type, e.g. "Polygon"
+  geometryType String
+
+  // This version stores viewer geometry in local meters.
+  // GPS boundary is stored separately when supplied.
+  coordinateSystem String @default("local-meter")
+
+  // JSON object, not a JSON-encoded string.
+  // Shape: { type, coordinateSystem, units, coordinates, gpsCoordinates? }
+  geometryJson Json
+
+  // GPS points: [longitude, latitude]
+  gpsCoordinates Json?
+
+  // Viewer points: [x, z] in meters
+  localCoordinates Json?
+
+  // Calculated from localCoordinates by the backend
+  area      Float?
+  areaUnit  String @default("sqm")
+  perimeter Float?
+
+  crop   String?
+  season String?
+  notes  String?
+
+  status DigitalTwinStatus @default(ACTIVE)
+
+  userId  String
+  farmId  String
+  fieldId String @unique
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  farm  Farm  @relation(fields: [farmId], references: [id], onDelete: Cascade)
+  field Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([farmId])
+  @@index([status])
+}

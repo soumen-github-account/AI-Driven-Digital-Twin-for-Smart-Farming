@@ -14,7 +14,10 @@ import {
   Share2,
   Thermometer,
   Waves,
+  Plus,
 } from "lucide-react";
+
+import { useNavigate } from "react-router-dom";
 
 import TwinMetricCard from "../components/digitalTwin/TwinMetricCard";
 import TwinMap from "../components/digitalTwin/TwinMap";
@@ -22,6 +25,11 @@ import TwinStatePanel from "../components/digitalTwin/TwinStatePanel";
 import SelectedFarmCard from "../components/digitalTwin/SelectedFarmCard";
 import QuickWeatherCard from "../components/digitalTwin/QuickWeatherCard";
 import SimulationTimeline from "../components/digitalTwin/SimulationTimeline";
+import FieldRepresentationBuilder from "../components/digitalTwin/FieldRepresentationBuilder";
+import { useState } from "react";
+import DigitalTwinFieldSelector from "../components/digitalTwin/DigitalTwinFieldSelector";
+import DigitalTwinRepresentation from "../components/digitalTwin/DigitalTwinRepresentation";
+import CommandCenter from "../components/digitalTwin/CommandCenter";
 
 const metricData = [
   {
@@ -67,6 +75,16 @@ const metricData = [
 ];
 
 function DigitalTwin() {
+  const navigate = useNavigate();
+  const [selectedField, setSelectedField] = useState(null);
+
+  const handleGenerateField = (representation) => {
+    console.log(
+      "FIELD REPRESENTATION:",
+      representation
+    );
+  };
+
   return (
     <div className="min-h-full space-y-4 pb-6">
       {/* Page header */}
@@ -74,8 +92,13 @@ function DigitalTwin() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-[22px] font-extrabold tracking-[-0.6px] text-[var(--color-text-primary)] sm:text-[25px]">
-              Digital Twin — Green Valley Farm
+              Digital Twin {selectedField ? ` — ${selectedField.name}` : ""}
             </h1>
+            <div className="mt-3">
+              <DigitalTwinFieldSelector
+                onFieldChange={setSelectedField}
+              />
+            </div>
 
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-success)]/20 bg-[var(--color-success)]/10 px-2.5 py-1 text-[9px] font-bold text-[var(--color-success)]">
               <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-success)]" />
@@ -88,7 +111,7 @@ function DigitalTwin() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        {/* <div className="flex flex-wrap items-center gap-2">
           <button className="twin-secondary-btn">
             <Share2 size={15} />
             <span>Share Twin</span>
@@ -103,36 +126,45 @@ function DigitalTwin() {
             <Play size={14} fill="currentColor" />
             <span>Run Simulation</span>
           </button>
-        </div>
+        </div> */}
+
+        <button
+        onClick={()=>navigate("add-digital-twin")}
+          className="
+            flex
+            h-[48px]
+            items-center
+            justify-center
+            gap-[8px]
+            rounded-[12px]
+            bg-[var(--color-primary)]
+            px-[18px]
+            text-[12px]
+            font-bold
+            text-white
+            shadow-[0_8px_24px_rgba(22,163,74,.20)]
+            transition-all
+            hover:-translate-y-[1px]
+            hover:bg-[var(--color-primary-hover)]
+          "
+        >
+          <Plus size={17} strokeWidth={2.5} />
+          Add Digital Twin
+        </button>
+
       </section>
 
       {/* Metrics */}
-      <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
+      {/* <section className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-5">
         {metricData.map((metric) => (
           <TwinMetricCard key={metric.title} {...metric} />
         ))}
-      </section>
+      </section> */}
 
-      {/* Main workspace */}
-      <section className="grid grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_268px]">
-        <div className="min-w-0">
-          <TwinMap />
-        </div>
-
-        <div className="min-w-0">
-          <TwinStatePanel />
-        </div>
-      </section>
-
-      {/* Lower controls / timeline */}
-      <section className="grid grid-cols-1 gap-3 lg:grid-cols-[187px_minmax(0,1fr)]">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-1">
-          <SelectedFarmCard />
-          <QuickWeatherCard />
-        </div>
-
-        <SimulationTimeline />
-      </section>
+      {/* digital twin representation */}
+      {/* <DigitalTwinRepresentation field={selectedField} /> */}
+      
+      
     </div>
   );
 }

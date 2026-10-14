@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Farm" ALTER COLUMN "farmType" DROP NOT NULL,
+ALTER COLUMN "mainCrop" DROP NOT NULL;

@@ -272,7 +272,7 @@ function Features() {
               sm:leading-7
             "
           >
-            AgriTwin AI combines computer vision, machine learning,
+            Farm Intel AI combines computer vision, machine learning,
             satellite data and real-time sensors to give your farm
             intelligent insights.
           </p>

@@ -316,7 +316,7 @@ function Footer() {
                     text-[var(--color-text-primary)]
                   "
                 >
-                  AgriTwin
+                  Farm Intel
                 </span>
 
                 <span
@@ -614,7 +614,7 @@ function Footer() {
           {/* Copyright */}
 
           <p>
-            © {new Date().getFullYear()} AgriTwin AI.
+            © {new Date().getFullYear()} Farm Intel AI.
             All rights reserved.
           </p>
 

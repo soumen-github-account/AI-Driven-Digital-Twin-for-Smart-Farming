@@ -289,7 +289,7 @@ function Sidebar({
                     text-[var(--color-text-primary)]
                   "
                 >
-                  AgriTwin
+                  FarmIntel
                 </span>
 
                 <span

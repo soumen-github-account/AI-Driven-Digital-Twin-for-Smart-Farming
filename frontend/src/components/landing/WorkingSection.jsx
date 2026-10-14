@@ -205,7 +205,7 @@ function WorkingSection() {
               lg:text-[44px]
             "
           >
-            How AgriTwin AI
+            How Farm Intel AI
             <span className="text-[var(--color-primary)]">
               {" "}
               Works

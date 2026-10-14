@@ -365,7 +365,7 @@ function HeroSection() {
                 lg:text-[16px]
               "
             >
-              AgriTwin AI creates a real-time digital twin of your farm
+              Farm Intel AI creates a real-time digital twin of your farm
               using AI, IoT, weather and satellite data to help you
               predict, decide and increase productivity sustainably.
             </p>

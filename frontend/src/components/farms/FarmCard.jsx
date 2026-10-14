@@ -6,7 +6,31 @@ import {
 
 import FarmSparkline from "./FarmSparkline";
 
-function FarmCard({ farm }) {
+function FarmCard({ farm, onEdit, onDelete }) {
+  console.log(farm)
+  const status =
+    farm.farmStatus === "ACTIVE"
+      ? "Active"
+      : "Inactive";
+
+  const area = `${farm.area} ${
+    farm.areaUnit === "hectares"
+      ? "ha"
+      : farm.areaUnit
+  }`;
+
+  const fieldsCount = farm.fields?.length || 0;
+
+  const crop = farm.mainCrop || "Not specified";
+
+  // Temporary health values until actual
+  // farm health calculation is implemented.
+  const health = 0;
+
+  const healthText = "No data";
+
+  const trend = [20, 25, 22, 30, 28, 35, 32, 40];
+
   return (
     <article
       className="
@@ -29,20 +53,39 @@ function FarmCard({ farm }) {
       ===================================================== */}
 
       <div className="relative h-[145px] overflow-hidden">
-        <img
-          src={farm.image}
-          alt={farm.name}
-          className="
-            h-full
-            w-full
-            object-cover
-            transition-transform
-            duration-500
-            group-hover:scale-[1.035]
-          "
-        />
 
-        {/* Image overlay */}
+        {farm.imageUrl ? (
+          <img
+            src={farm.imageUrl}
+            alt={farm.name}
+            className="
+              h-full
+              w-full
+              object-cover
+              transition-transform
+              duration-500
+              group-hover:scale-[1.035]
+            "
+          />
+        ) : (
+          <div
+            className="
+              flex
+              h-full
+              w-full
+              items-center
+              justify-center
+              bg-[var(--color-surface-secondary)]
+            "
+          >
+            <Sprout
+              size={35}
+              className="text-[var(--color-primary)]/40"
+            />
+          </div>
+        )}
+
+        {/* Overlay */}
 
         <div
           className="
@@ -58,23 +101,27 @@ function FarmCard({ farm }) {
         {/* STATUS */}
 
         <span
-          className="
+          className={`
             absolute
             right-2.5
             top-2.5
             rounded-full
             border
             border-white/30
-            bg-[var(--color-success)]
             px-2
             py-1
             text-[8px]
             font-bold
             text-white
             shadow-sm
-          "
+            ${
+              farm.farmStatus === "ACTIVE"
+                ? "bg-[var(--color-success)]"
+                : "bg-gray-500"
+            }
+          `}
         >
-          {farm.status}
+          {status}
         </span>
       </div>
 
@@ -83,6 +130,7 @@ function FarmCard({ farm }) {
       ===================================================== */}
 
       <div className="p-3">
+
         {/* NAME */}
 
         <div>
@@ -109,7 +157,10 @@ function FarmCard({ farm }) {
             "
           >
             <MapPin size={11} />
-            {farm.location}
+
+            <span className="truncate">
+              {farm.location || "Location not available"}
+            </span>
           </div>
         </div>
 
@@ -131,17 +182,17 @@ function FarmCard({ farm }) {
         >
           <Meta
             label="Area"
-            value={farm.area}
+            value={area}
           />
 
           <Meta
             label="Fields"
-            value={farm.fields}
+            value={fieldsCount}
           />
 
           <Meta
             label="Main Crop"
-            value={farm.crop}
+            value={crop}
           />
         </div>
 
@@ -150,6 +201,7 @@ function FarmCard({ farm }) {
         ================================================= */}
 
         <div className="mt-3">
+
           <p
             className="
               text-[9px]
@@ -160,10 +212,18 @@ function FarmCard({ farm }) {
             Health Score
           </p>
 
-          <div className="mt-1.5 flex items-center justify-between gap-2">
-            {/* SCORE */}
+          <div
+            className="
+              mt-1.5
+              flex
+              items-center
+              justify-between
+              gap-2
+            "
+          >
 
             <div className="flex items-center gap-2">
+
               <div
                 className="
                   relative
@@ -196,7 +256,7 @@ function FarmCard({ farm }) {
                     text-[var(--color-primary)]
                   "
                 >
-                  {farm.health}%
+                  {health}%
                 </span>
               </div>
 
@@ -207,13 +267,13 @@ function FarmCard({ farm }) {
                   text-[var(--color-primary)]
                 "
               >
-                {farm.healthText}
+                {healthText}
               </span>
+
             </div>
 
-            <FarmSparkline
-              points={farm.trend}
-            />
+            <FarmSparkline points={trend} />
+
           </div>
         </div>
 
@@ -222,8 +282,10 @@ function FarmCard({ farm }) {
         ================================================= */}
 
         <div className="mt-4 flex items-center gap-1.5">
+
           <button
             type="button"
+            onClick={() => onEdit?.(farm)}
             className="
               h-8
               flex-1
@@ -239,30 +301,31 @@ function FarmCard({ farm }) {
               hover:bg-[var(--color-primary)]/6
             "
           >
-            View Farm
+            Edit Farm
           </button>
 
           <button
             type="button"
+            onClick={() => onDelete(farm)}
             className="
               h-8
               flex-1
               rounded-lg
               border
-              border-[var(--color-border)]
+              border-[var(--color-danger)]/30
               bg-[var(--color-surface)]
               text-[9px]
               font-bold
-              text-[var(--color-primary)]
+              text-[var(--color-danger)]
               transition-all
-              hover:border-[var(--color-primary)]/30
-              hover:bg-[var(--color-primary)]/6
+              hover:border-[var(--color-danger)]/30
+              hover:bg-[var(--color-danger)]/6
             "
           >
-            Manage
+            Delete
           </button>
 
-          <button
+          {/* <button
             type="button"
             aria-label="More options"
             className="
@@ -282,16 +345,28 @@ function FarmCard({ farm }) {
             "
           >
             <Ellipsis size={15} />
-          </button>
+          </button> */}
+
         </div>
       </div>
     </article>
   );
 }
 
+// =========================================================
+// META
+// =========================================================
+
 function Meta({ label, value }) {
   return (
-    <div className="min-w-0 px-2 first:pl-0 last:pr-0">
+    <div
+      className="
+        min-w-0
+        px-2
+        first:pl-0
+        last:pr-0
+      "
+    >
       <p
         className="
           text-[8px]

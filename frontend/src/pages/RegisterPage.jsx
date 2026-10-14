@@ -21,23 +21,40 @@ import {
   Leaf,
 } from "lucide-react";
 
+import { FcGoogle } from "react-icons/fc";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { GoogleLogin } from "@react-oauth/google";
 
 import RegisterBgLight from "../assets/BgRegisterLight.png";
 import RegisterBgDark from "../assets/BgRegisterDark.png";
 import { useTheme } from "../contexts/ThemeContext";
-import logo from "../assets/logo.png"
+import logo from "../assets/logo.png";
+
+import { registerUser, googleLogin } from "../services/auth.service";
+import { setUser } from "../store/slices/authSlice";
+import { useDispatch } from "react-redux";
 
 /* =========================================================
    REGISTER PAGE
 ========================================================= */
 
 function RegisterPage() {
-    const { theme } = useTheme();
+  const { theme } = useTheme();
+  const navigate = useNavigate();
+
+  /* =======================================================
+     STATES
+  ======================================================= */
+
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] =
-    useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const dispatch = useDispatch();
+
+  const [error, setError] = useState("");
 
   const [formData, setFormData] = useState({
     fullName: "",
@@ -60,6 +77,10 @@ function RegisterPage() {
       ...prev,
       [name]: value,
     }));
+
+    if (error) {
+      setError("");
+    }
   };
 
   /* =======================================================
@@ -70,26 +91,22 @@ function RegisterPage() {
     {
       icon: BrainCircuit,
       title: "AI-Powered Insights",
-      description:
-        "Get AI recommendations tailored for your farm.",
+      description: "Get AI recommendations tailored for your farm.",
     },
     {
       icon: Activity,
       title: "Real-time Monitoring",
-      description:
-        "Monitor crops, soil, weather and more in real-time.",
+      description: "Monitor crops, soil, weather and more in real-time.",
     },
     {
       icon: TrendingUp,
       title: "Higher Productivity",
-      description:
-        "Improve yield, save resources and reduce costs.",
+      description: "Improve yield, save resources and reduce costs.",
     },
     {
       icon: ShieldCheck,
       title: "Secure & Reliable",
-      description:
-        "Your farm data is encrypted and 100% secure.",
+      description: "Your farm data is encrypted and 100% secure.",
     },
   ];
 
@@ -140,23 +157,123 @@ function RegisterPage() {
   ];
 
   /* =======================================================
-     SUBMIT
+     NORMAL REGISTER
   ======================================================= */
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (
-      formData.password !== formData.confirmPassword
-    ) {
-      alert("Passwords do not match.");
+    if (loading || googleLoading) return;
+
+    setError("");
+
+    const fullName = formData.fullName.trim();
+    const email = formData.email.trim();
+    const phone = formData.phone.trim();
+
+    /* -----------------------------------------------
+       BASIC VALIDATION
+    ------------------------------------------------ */
+
+    if (!fullName) {
+      setError("Please enter your full name.");
       return;
     }
 
-    console.log({
-      ...formData,
-      role,
-    });
+    if (!email) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (!phone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
+    /* -----------------------------------------------
+       PHONE VALIDATION
+    ------------------------------------------------ */
+
+    const phoneRegex = /^[6-9]\d{9}$/;
+
+    if (!phoneRegex.test(phone)) {
+      setError("Please enter a valid 10-digit Indian phone number.");
+      return;
+    }
+
+    /* -----------------------------------------------
+       PASSWORD MATCH
+    ------------------------------------------------ */
+
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    /* -----------------------------------------------
+       PASSWORD STRENGTH
+    ------------------------------------------------ */
+
+    const allPasswordRulesValid = passwordRules.every((rule) => rule.valid);
+
+    if (!allPasswordRulesValid) {
+      setError("Please create a stronger password.");
+      return;
+    }
+
+    /* -----------------------------------------------
+       API REQUEST
+    ------------------------------------------------ */
+
+    try {
+      setLoading(true);
+
+      const result = await registerUser({
+        name: fullName,
+        email,
+        phone,
+        password: formData.password,
+        role: role.toUpperCase(),
+      });
+
+      const token = result?.data?.token;
+      const user = result?.data?.user;
+
+      if (!token) {
+        throw new Error("Authentication token was not received.");
+      }
+
+      localStorage.setItem("agritwin_token", token);
+
+      if (user) {
+        dispatch(setUser(user));
+      }
+
+      navigate("/dashboard", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error("Registration error:", error);
+
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.error ||
+        error?.message ||
+        "Registration failed. Please try again.";
+
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignup = () => {
+    if (loading || googleLoading) return;
+
+    setError("");
+    setGoogleLoading(true);
+
+    googleLogin();
   };
 
   return (
@@ -171,7 +288,7 @@ function RegisterPage() {
       "
     >
       {/* ===================================================
-          FULL BACKGROUND IMAGE
+          BACKGROUND
       =================================================== */}
 
       <img
@@ -189,10 +306,6 @@ function RegisterPage() {
         "
       />
 
-      {/* ===================================================
-          GLOBAL SOFT OVERLAY
-      =================================================== */}
-
       <div
         className="
           pointer-events-none
@@ -201,10 +314,6 @@ function RegisterPage() {
           bg-[var(--color-surface)]/[0.08]
         "
       />
-
-      {/* ===================================================
-          RIGHT SIDE WHITE WASH
-      =================================================== */}
 
       <div
         className="
@@ -255,7 +364,8 @@ function RegisterPage() {
           h-[80px]
           items-center
           justify-between
-          px-[38px]
+          px-[20px]
+          sm:px-[38px]
         "
       >
         {/* LOGO */}
@@ -269,21 +379,20 @@ function RegisterPage() {
             select-none
           "
         >
-          {/* Leaf Logo */}
-
-          <img src={logo} className="w-[35px]" alt="" />
+          <img src={logo} className="w-[35px]" alt="Farm Intel AI" />
 
           <div className="flex items-center gap-[8px]">
             <span
               className="
-                text-[27px]
+                text-[22px]
                 font-extrabold
                 leading-none
                 tracking-[-1.5px]
                 text-[var(--color-text-primary)]
+                sm:text-[27px]
               "
             >
-              AgriTwin
+              Farm Intel
             </span>
 
             <span
@@ -293,10 +402,11 @@ function RegisterPage() {
                 border-[var(--color-primary)]
                 px-[6px]
                 py-[3px]
-                text-[10px]
+                text-[9px]
                 font-bold
                 leading-none
                 text-[var(--color-primary)]
+                sm:text-[10px]
               "
             >
               AI
@@ -306,7 +416,7 @@ function RegisterPage() {
 
         {/* LOGIN */}
 
-        <div className="flex items-center gap-[17px]">
+        <div className="flex items-center gap-[10px] sm:gap-[17px]">
           <span
             className="
               hidden
@@ -373,9 +483,7 @@ function RegisterPage() {
             lg:block
           "
         >
-          {/* =================================================
-              LEFT HERO CONTENT
-          ================================================= */}
+          {/* HERO CONTENT */}
 
           <div
             className="
@@ -387,8 +495,6 @@ function RegisterPage() {
               xl:w-[425px]
             "
           >
-            {/* HEADING */}
-
             <h1
               className="
                 m-0
@@ -400,13 +506,8 @@ function RegisterPage() {
                 xl:text-[51px]
               "
             >
-              Join{" "}
-              <span className="text-[var(--color-primary)]">
-                AgriTwin
-              </span>
+              Join <span className="text-[var(--color-primary)]">Farm Intel</span>
             </h1>
-
-            {/* SUBTITLE */}
 
             <p
               className="
@@ -423,29 +524,13 @@ function RegisterPage() {
               and grow smarter with AI
             </p>
 
-            {/* =================================================
-                BENEFITS
-            ================================================= */}
+            {/* BENEFITS */}
 
             <div className="mt-[31px] space-y-[20px]">
-              {benefits.map(
-                ({
-                  icon: Icon,
-                  title,
-                  description,
-                }) => (
+              {benefits.map(({ icon: Icon, title, description }) => (
+                <div key={title} className="flex items-start gap-[13px]">
                   <div
-                    key={title}
                     className="
-                      flex
-                      items-start
-                      gap-[13px]
-                    "
-                  >
-                    {/* ICON */}
-
-                    <div
-                      className="
                         flex
                         h-[50px]
                         w-[50px]
@@ -460,48 +545,40 @@ function RegisterPage() {
                         shadow-[0_4px_16px_rgba(22,163,74,.07)]
                         backdrop-blur-md
                       "
-                    >
-                      <Icon
-                        size={23}
-                        strokeWidth={1.8}
-                      />
-                    </div>
+                  >
+                    <Icon size={23} strokeWidth={1.8} />
+                  </div>
 
-                    {/* TEXT */}
-
-                    <div className="pt-[2px]">
-                      <h3
-                        className="
+                  <div className="pt-[2px]">
+                    <h3
+                      className="
                           text-[13px]
                           font-bold
                           leading-5
                           text-[var(--color-text-primary)]
                         "
-                      >
-                        {title}
-                      </h3>
+                    >
+                      {title}
+                    </h3>
 
-                      <p
-                        className="
+                    <p
+                      className="
                           mt-[2px]
                           max-w-[255px]
                           text-[11px]
                           leading-[18px]
                           text-[var(--color-text-secondary)]
                         "
-                      >
-                        {description}
-                      </p>
-                    </div>
+                    >
+                      {description}
+                    </p>
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* =================================================
-              WEATHER CARD
-          ================================================= */}
+          {/* WEATHER */}
 
           <div
             className="
@@ -516,9 +593,7 @@ function RegisterPage() {
             <WeatherCard />
           </div>
 
-          {/* =================================================
-              CROP HEALTH
-          ================================================= */}
+          {/* CROP HEALTH */}
 
           <div
             className="
@@ -538,9 +613,7 @@ function RegisterPage() {
             />
           </div>
 
-          {/* =================================================
-              SOIL MOISTURE
-          ================================================= */}
+          {/* SOIL MOISTURE */}
 
           <div
             className="
@@ -560,9 +633,7 @@ function RegisterPage() {
             />
           </div>
 
-          {/* =================================================
-              TESTIMONIAL
-          ================================================= */}
+          {/* TESTIMONIAL */}
 
           <div
             className="
@@ -582,8 +653,6 @@ function RegisterPage() {
             "
           >
             <div className="flex items-center gap-[12px]">
-              {/* AVATAR */}
-
               <div
                 className="
                   flex
@@ -600,13 +669,8 @@ function RegisterPage() {
                   text-[var(--color-primary)]
                 "
               >
-                <User
-                  size={25}
-                  strokeWidth={1.6}
-                />
+                <User size={25} strokeWidth={1.6} />
               </div>
-
-              {/* QUOTE */}
 
               <div>
                 <p
@@ -616,9 +680,8 @@ function RegisterPage() {
                     text-[var(--color-text-primary)]
                   "
                 >
-                  “AgriTwin has completely transformed
-                  how I manage my farm. The AI insights
-                  are incredibly accurate!”
+                  “Farm Intel has completely transformed how I manage my farm. The
+                  AI insights are incredibly accurate!”
                 </p>
 
                 <p
@@ -635,9 +698,7 @@ function RegisterPage() {
             </div>
           </div>
 
-          {/* =================================================
-              TRUSTED BY
-          ================================================= */}
+          {/* TRUSTED BY */}
 
           <div
             className="
@@ -684,25 +745,15 @@ function RegisterPage() {
                 text-[var(--color-text-secondary)]
               "
             >
-              <span className="text-[11px] font-black">
-                John Deere
-              </span>
+              <span className="text-[11px] font-black">John Deere</span>
 
-              <span className="text-[11px] font-black">
-                BAYER
-              </span>
+              <span className="text-[11px] font-black">BAYER</span>
 
-              <span className="text-[11px] font-black">
-                CORTEVA
-              </span>
+              <span className="text-[11px] font-black">CORTEVA</span>
 
-              <span className="text-[11px] font-black">
-                FMC
-              </span>
+              <span className="text-[11px] font-black">FMC</span>
 
-              <span className="text-[11px] font-black">
-                syngenta
-              </span>
+              <span className="text-[11px] font-black">syngenta</span>
             </div>
           </div>
         </section>
@@ -717,17 +768,15 @@ function RegisterPage() {
             min-h-screen
             items-center
             justify-center
-            px-[18px]
+            px-[15px]
             pb-[24px]
-            pt-[70px]
+            pt-[90px]
             sm:px-[30px]
             lg:px-[20px]
             xl:px-[20px]
           "
         >
-          {/* =================================================
-              REGISTER CARD
-          ================================================= */}
+          {/* REGISTER CARD */}
 
           <div
             className="
@@ -737,17 +786,16 @@ function RegisterPage() {
               border
               border-[var(--color-border)]
               bg-[var(--color-surface)]/95
-              px-[32px]
-              py-[35px]
+              px-[22px]
+              py-[30px]
               shadow-[0_14px_55px_rgba(23,32,26,.10)]
               backdrop-blur-[22px]
               sm:px-[34px]
+              sm:py-[35px]
               xl:px-[33px]
             "
           >
-            {/* =================================================
-                FORM HEADING
-            ================================================= */}
+            {/* HEADING */}
 
             <div>
               <h2
@@ -774,41 +822,91 @@ function RegisterPage() {
               </p>
             </div>
 
+            {/* ERROR */}
+
+            {error && (
+              <div
+                role="alert"
+                className="
+                  mt-[16px]
+                  rounded-[8px]
+                  border
+                  border-red-500/20
+                  bg-red-500/5
+                  px-[12px]
+                  py-[10px]
+                  text-[10px]
+                  font-medium
+                  text-red-500
+                "
+              >
+                {error}
+              </div>
+            )}
+
             {/* =================================================
                 GOOGLE BUTTON
             ================================================= */}
 
-            <button
-              type="button"
-              className="
-                mt-[25px]
-                flex
-                h-[55px]
-                w-full
-                items-center
-                justify-center
-                gap-[11px]
-                rounded-[10px]
-                border
-                border-[var(--color-border)]
-                bg-[var(--color-surface)]
-                text-[14px]
-                font-semibold
-                text-[var(--color-text-primary)]
-                shadow-[0_2px_10px_rgba(23,32,26,.02)]
-                transition
-                hover:border-[var(--color-border-hover)]
-                hover:shadow-[0_5px_18px_rgba(22,163,74,.08)]
-              "
-            >
-              <GoogleIcon />
 
-              Sign up with Google
-            </button>
+            <div className="relative mt-[25px]">
+              <button
+                type="button"
+                onClick={handleGoogleSignup}
+                disabled={loading || googleLoading}
+                className="
+      relative
+      flex
+      h-[55px]
+      w-full
+      items-center
+      justify-center
+      gap-[11px]
+      overflow-hidden
+      rounded-[10px]
+      border
+      border-[var(--color-border)]
+      bg-[var(--color-surface)]
+      text-[14px]
+      font-semibold
+      text-[var(--color-text-primary)]
+      shadow-[0_2px_10px_rgba(23,32,26,.02)]
+      transition-all
+      duration-200
+      hover:border-[var(--color-border-hover)]
+      hover:shadow-[0_5px_18px_rgba(22,163,74,.08)]
+      active:scale-[0.99]
+      disabled:cursor-not-allowed
+      disabled:opacity-60
+    "
+              >
+                {googleLoading ? (
+                  <>
+                    <span
+                      className="
+            h-[18px]
+            w-[18px]
+            animate-spin
+            rounded-full
+            border-2
+            border-[var(--color-primary)]/20
+            border-t-[var(--color-primary)]
+          "
+                    />
 
-            {/* =================================================
-                DIVIDER
-            ================================================= */}
+                    <span>Connecting to Google...</span>
+                  </>
+                ) : (
+                  <>
+                    <FcGoogle className="text-[21px]" />
+
+                    <span>Sign up with Google</span>
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* DIVIDER */}
 
             <Divider text="or sign up with email" />
 
@@ -816,13 +914,8 @@ function RegisterPage() {
                 FORM
             ================================================= */}
 
-            <form
-              onSubmit={handleSubmit}
-              className="space-y-[15px]"
-            >
-              {/* =================================================
-                  NAME + EMAIL
-              ================================================= */}
+            <form onSubmit={handleSubmit} className="space-y-[15px]">
+              {/* NAME + EMAIL */}
 
               <div
                 className="
@@ -853,20 +946,17 @@ function RegisterPage() {
                 />
               </div>
 
-              {/* =================================================
-                  PHONE
-              ================================================= */}
+              {/* PHONE */}
 
               <div>
-                <label className={labelClass}>
+                <label htmlFor="phone" className={labelClass}>
                   Phone Number
                 </label>
 
                 <div className="flex gap-[8px]">
-                  {/* COUNTRY */}
-
                   <button
                     type="button"
+                    aria-label="Country code"
                     className="
                       flex
                       h-[44px]
@@ -884,18 +974,12 @@ function RegisterPage() {
                       text-[var(--color-text-primary)]
                     "
                   >
-                    <span className="text-[16px]">
-                      🇮🇳
-                    </span>
+                    <span className="text-[16px]">🇮🇳</span>
 
                     <span>+91</span>
 
-                    <span className="text-[var(--color-text-muted)]">
-                      ˅
-                    </span>
+                    <span className="text-[var(--color-text-muted)]">˅</span>
                   </button>
-
-                  {/* PHONE INPUT */}
 
                   <div className="relative flex-1">
                     <Phone
@@ -911,10 +995,24 @@ function RegisterPage() {
                     />
 
                     <input
+                      id="phone"
                       name="phone"
                       type="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                       value={formData.phone}
-                      onChange={handleChange}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, "");
+
+                        if (value.length <= 10) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            phone: value,
+                          }));
+                        }
+
+                        setError("");
+                      }}
                       placeholder="Enter your phone number"
                       className={inputClass}
                       required
@@ -923,9 +1021,7 @@ function RegisterPage() {
                 </div>
               </div>
 
-              {/* =================================================
-                  PASSWORD + CONFIRM
-              ================================================= */}
+              {/* PASSWORD + CONFIRM */}
 
               <div
                 className="
@@ -956,9 +1052,7 @@ function RegisterPage() {
                 />
               </div>
 
-              {/* =================================================
-                  PASSWORD REQUIREMENTS
-              ================================================= */}
+              {/* PASSWORD REQUIREMENTS */}
 
               <div className="pt-[1px]">
                 <p
@@ -1007,12 +1101,7 @@ function RegisterPage() {
                           }
                         `}
                       >
-                        {rule.valid && (
-                          <Check
-                            size={9}
-                            strokeWidth={3}
-                          />
-                        )}
+                        {rule.valid && <Check size={9} strokeWidth={3} />}
                       </span>
 
                       {rule.label}
@@ -1021,9 +1110,71 @@ function RegisterPage() {
                 </div>
               </div>
 
-              {/* =================================================
-                  TERMS
-              ================================================= */}
+              {/* ROLES */}
+
+              <div
+                className="
+                  grid
+                  grid-cols-2
+                  gap-[13px]
+                  sm:grid-cols-4
+                "
+              >
+                {roles.map(({ name, icon: Icon }) => {
+                  const active = role === name;
+
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      onClick={() => {
+                        setRole(name);
+                        setError("");
+                      }}
+                      className={`
+                          flex
+                          h-[80px]
+                          flex-col
+                          items-center
+                          justify-center
+                          gap-[7px]
+                          rounded-[9px]
+                          border
+                          transition-all
+                          duration-200
+                          ${
+                            active
+                              ? `
+                                border-[var(--color-primary)]
+                                bg-[var(--color-surface-secondary)]
+                                text-[var(--color-primary)]
+                              `
+                              : `
+                                border-[var(--color-border)]
+                                bg-[var(--color-surface)]
+                                text-[var(--color-text-secondary)]
+                                hover:border-[var(--color-border-hover)]
+                                hover:text-[var(--color-primary)]
+                              `
+                          }
+                        `}
+                    >
+                      <Icon size={21} strokeWidth={1.7} />
+
+                      <span
+                        className="
+                            text-[10px]
+                            font-semibold
+                          "
+                      >
+                        {name}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* TERMS */}
 
               <label
                 className="
@@ -1076,12 +1227,45 @@ function RegisterPage() {
                 </span>
               </label>
 
-              {/* =================================================
-                  CREATE ACCOUNT BUTTON
-              ================================================= */}
+              {/* INFO */}
+
+              <p
+                className="
+                  mt-[23px]
+                  text-center
+                  text-[9px]
+                  leading-[16px]
+                  text-[var(--color-text-muted)]
+                "
+              >
+                By creating an account, you agree to our{" "}
+                <a
+                  href="#terms"
+                  className="
+                    font-medium
+                    text-[var(--color-primary)]
+                  "
+                >
+                  Terms of Service
+                </a>{" "}
+                and acknowledge our{" "}
+                <a
+                  href="#privacy"
+                  className="
+                    font-medium
+                    text-[var(--color-primary)]
+                  "
+                >
+                  Privacy Policy
+                </a>
+                .
+              </p>
+
+              {/* CREATE ACCOUNT */}
 
               <button
                 type="submit"
+                disabled={loading || googleLoading}
                 className="
                   group
                   mt-[1px]
@@ -1103,129 +1287,40 @@ function RegisterPage() {
                   hover:bg-[var(--color-primary-hover)]
                   hover:shadow-[0_10px_28px_rgba(22,163,74,.27)]
                   active:translate-y-0
+                  disabled:cursor-not-allowed
+                  disabled:opacity-60
+                  disabled:hover:translate-y-0
                 "
               >
-                Create Account
-
-                <ArrowRight
-                  size={17}
-                  className="
-                    transition-transform
-                    group-hover:translate-x-1
-                  "
-                />
+                {loading ? (
+                  <>
+                    <span
+                      className="
+                        h-[17px]
+                        w-[17px]
+                        animate-spin
+                        rounded-full
+                        border-2
+                        border-white/30
+                        border-t-white
+                      "
+                    />
+                    Creating Account...
+                  </>
+                ) : (
+                  <>
+                    Create Account
+                    <ArrowRight
+                      size={17}
+                      className="
+                        transition-transform
+                        group-hover:translate-x-1
+                      "
+                    />
+                  </>
+                )}
               </button>
             </form>
-
-            {/* =================================================
-                ROLE DIVIDER
-            ================================================= */}
-
-            <Divider text="or sign up as" />
-
-            {/* =================================================
-                ROLE CARDS
-            ================================================= */}
-
-            <div
-              className="
-                grid
-                grid-cols-2
-                gap-[13px]
-                sm:grid-cols-4
-              "
-            >
-              {roles.map(
-                ({ name, icon: Icon }) => {
-                  const active = role === name;
-
-                  return (
-                    <button
-                      key={name}
-                      type="button"
-                      onClick={() => setRole(name)}
-                      className={`
-                        flex
-                        h-[80px]
-                        flex-col
-                        items-center
-                        justify-center
-                        gap-[7px]
-                        rounded-[9px]
-                        border
-                        transition-all
-                        duration-200
-                        ${
-                          active
-                            ? `
-                              border-[var(--color-primary)]
-                              bg-[var(--color-surface-secondary)]
-                              text-[var(--color-primary)]
-                            `
-                            : `
-                              border-[var(--color-border)]
-                              bg-[var(--color-surface)]
-                              text-[var(--color-text-secondary)]
-                              hover:border-[var(--color-border-hover)]
-                              hover:text-[var(--color-primary)]
-                            `
-                        }
-                      `}
-                    >
-                      <Icon
-                        size={21}
-                        strokeWidth={1.7}
-                      />
-
-                      <span
-                        className="
-                          text-[10px]
-                          font-semibold
-                        "
-                      >
-                        {name}
-                      </span>
-                    </button>
-                  );
-                }
-              )}
-            </div>
-
-            {/* =================================================
-                BOTTOM TERMS
-            ================================================= */}
-
-            <p
-              className="
-                mt-[23px]
-                text-center
-                text-[9px]
-                leading-[16px]
-                text-[var(--color-text-muted)]
-              "
-            >
-              By creating an account, you agree to our{" "}
-              <a
-                href="#terms"
-                className="
-                  font-medium
-                  text-[var(--color-primary)]
-                "
-              >
-                Terms of Service
-              </a>{" "}
-              and acknowledge our{" "}
-              <a
-                href="#privacy"
-                className="
-                  font-medium
-                  text-[var(--color-primary)]
-                "
-              >
-                Privacy Policy
-              </a>
-              .
-            </p>
           </div>
         </section>
       </div>
@@ -1234,7 +1329,7 @@ function RegisterPage() {
 }
 
 /* =========================================================
-   DIVIDER COMPONENT
+   DIVIDER
 ========================================================= */
 
 function Divider({ text }) {
@@ -1315,7 +1410,7 @@ function InputField({
 }) {
   return (
     <div>
-      <label className={labelClass}>
+      <label htmlFor={name} className={labelClass}>
         {label}
       </label>
 
@@ -1333,6 +1428,7 @@ function InputField({
         />
 
         <input
+          id={name}
           name={name}
           type={type}
           value={value}
@@ -1361,7 +1457,7 @@ function PasswordField({
 }) {
   return (
     <div>
-      <label className={labelClass}>
+      <label htmlFor={name} className={labelClass}>
         {label}
       </label>
 
@@ -1379,6 +1475,7 @@ function PasswordField({
         />
 
         <input
+          id={name}
           name={name}
           type={show ? "text" : "password"}
           value={value}
@@ -1419,78 +1516,12 @@ function PasswordField({
             transition-colors
             hover:text-[var(--color-primary)]
           "
-          aria-label={
-            show
-              ? "Hide password"
-              : "Show password"
-          }
+          aria-label={show ? "Hide password" : "Show password"}
         >
-          {show ? (
-            <EyeOff size={16} />
-          ) : (
-            <Eye size={16} />
-          )}
+          {show ? <EyeOff size={16} /> : <Eye size={16} />}
         </button>
       </div>
     </div>
-  );
-}
-
-/* =========================================================
-   GOOGLE ICON
-========================================================= */
-
-function GoogleIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        fill="#4285F4"
-        d="
-          M21.35 12.27
-          c0-.73-.06-1.43-.18-2.1H12v3.98h5.23
-          a4.46 4.46 0 0 1-1.94 2.93v2.43h3.14
-          c1.84-1.69 2.92-4.18 2.92-7.24Z
-        "
-      />
-
-      <path
-        fill="#34A853"
-        d="
-          M12 21.5
-          c2.63 0 4.84-.87 6.45-2.36l-3.14-2.43
-          c-.87.58-1.98.92-3.31.92
-          -2.54 0-4.69-1.72-5.46-4.03H3.3v2.51
-          A9.74 9.74 0 0 0 12 21.5Z
-        "
-      />
-
-      <path
-        fill="#FBBC05"
-        d="
-          M6.54 13.6
-          A5.85 5.85 0 0 1 6.24 12
-          c0-.56.1-1.1.3-1.6V7.89H3.3
-          A9.48 9.48 0 0 0 2.25 12
-          c0 1.48.35 2.88 1.05 4.11l3.24-2.51Z
-        "
-      />
-
-      <path
-        fill="#EA4335"
-        d="
-          M12 6.37
-          c1.43 0 2.7.49 3.71 1.45l2.78-2.78
-          C16.84 3.46 14.63 2.5 12 2.5
-          a9.74 9.74 0 0 0-8.7 5.39l3.24 2.51
-          C7.31 8.09 9.46 6.37 12 6.37Z
-        "
-      />
-    </svg>
   );
 }
 
@@ -1516,11 +1547,7 @@ function WeatherCard() {
         backdrop-blur-[10px]
       "
     >
-      <CloudSun
-        size={25}
-        strokeWidth={1.5}
-        className="text-white"
-      />
+      <CloudSun size={25} strokeWidth={1.5} className="text-white" />
 
       <div>
         <div
@@ -1534,9 +1561,7 @@ function WeatherCard() {
           24°C
         </div>
 
-        <div className="text-[8px] text-white/75">
-          Partly Cloudy
-        </div>
+        <div className="text-[8px] text-white/75">Partly Cloudy</div>
       </div>
     </div>
   );
@@ -1546,12 +1571,7 @@ function WeatherCard() {
    FARM STAT
 ========================================================= */
 
-function FarmStat({
-  icon: Icon,
-  title,
-  value,
-  status,
-}) {
+function FarmStat({ icon: Icon, title, value, status }) {
   return (
     <div
       className="
@@ -1579,10 +1599,7 @@ function FarmStat({
           text-white/90
         "
       >
-        <Icon
-          size={12}
-          strokeWidth={1.6}
-        />
+        <Icon size={12} strokeWidth={1.6} />
 
         {title}
       </div>
